@@ -7,34 +7,41 @@
 
 import UIKit
 
-struct FileFolder {
-    var name: String
-    var size: Int
-    var type: String
+struct Constants {
+    static let identificator = "MyView"
+    static let titleAddButton = "Создать"
+    static let sizeButton: CGFloat = 30
+    static let NSFileTypeRegularString = "NSFileTypeRegular"
+    static let NSFileTypeDirectoryString = "NSFileTypeDirectory"
+    static let stringFileImage = "file"
+    static let stringFolderImage = "folder"
+    static let heightRow: CGFloat = 50
+    static let half: CGFloat = 2
+    static let placeholderName = "Введите название"
+    static let stringCreateFile = "Создать файл"
+    static let stringCreateFolder = "Создать папку"
 }
 
-class ViewController: UIViewController , UITableViewDelegate, UITableViewDataSource, UITableViewDragDelegate {
+class ViewController: UIViewController , UITableViewDelegate {
 
-    var tableView = UITableView()
+    private var tableView = UITableView()
     
-    var files: [FileFolder] = []
+    private var files = [FileFolder]() {
+        willSet {
+            tableView.reloadData()
+        }
+    }
     
-    var buttonAdd = UIButton()
-    var buttonFile = UIButton()
-    var buttonFolder = UIButton()
-    
-    var textField = UITextField()
-    
-    let identificator = "MyView"
+    private var buttonAdd = UIButton()
+    private var buttonFile = UIButton()
+    private var buttonFolder = UIButton()
+    private var textField = UITextField()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         createTable()
-        
         createAddButton()
-        
-        getFiles()
+        files = FM().getFiles()
     }
     
     func createTable() {
@@ -44,68 +51,20 @@ class ViewController: UIViewController , UITableViewDelegate, UITableViewDataSou
         tableView.dragInteractionEnabled = true
         tableView.dragDelegate = self
     
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: identificator)
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: Constants.identificator)
         
         self.view.addSubview(tableView)
     }
 
-    // MARK: DataSource
-    
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return files.count
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell(style: UITableViewCell.CellStyle.value1, reuseIdentifier: identificator)
-        if files[indexPath.row].type == "NSFileTypeRegular" {
-            cell.imageView?.image = UIImage(named: "file")
-        }
-        if files[indexPath.row].type == "NSFileTypeDirectory" {
-            cell.imageView?.image = UIImage(named: "folder")
-        }
-        cell.textLabel?.text = files[indexPath.row].name
-        cell.detailTextLabel?.text = "\(files[indexPath.row].size) KB"
-        return cell
-    }
-    
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 50
-    }
-    
-    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
-        let footerView = UIView()
-        
-        textField = UITextField(frame: CGRect(x: 0, y: self.view.bounds.height - 60, width: self.view.bounds.width, height: 30))
-        textField.placeholder = "Введите название"
-        textField.isHidden = true
-        
-        buttonFile = UIButton()
-        buttonFile.frame = CGRect(x: 0, y: self.view.bounds.height - 30, width: self.view.bounds.width / 2, height: 30)
-        buttonFile.setTitle("Создать файл", for: .normal)
-        buttonFile.setTitleColor( .black, for: .normal)
-        buttonFile.backgroundColor = .gray
-        buttonFile.addAction(UIAction(handler: {_ in self.addFile()}), for: .touchUpInside)
-        buttonFile.isHidden = true
-        
-        buttonFolder = UIButton()
-        buttonFolder.frame = CGRect(x: self.view.bounds.width / 2, y: self.view.bounds.height - 30, width: self.view.bounds.width / 2, height: 30)
-        buttonFolder.setTitle("Создать папку", for: .normal)
-        buttonFolder.setTitleColor( .black, for: .normal)
-        buttonFolder.backgroundColor = .gray
-        buttonFolder.addAction(UIAction(handler: {_ in self.addFolder()}), for: .touchUpInside)
-        buttonFolder.isHidden = true
-        
-        self.view.addSubview(buttonFile)
-        self.view.addSubview(buttonFolder)
-        self.view.addSubview(textField)
-        
-        return footerView
-    }
-    
     func createAddButton() {
         buttonAdd = UIButton()
-        buttonAdd.frame = CGRect(x: 0, y: self.view.bounds.height - 30, width: self.view.bounds.width , height: 30)
-        buttonAdd.setTitle("Создать", for: .normal)
+        buttonAdd.frame = CGRect(
+            x: .zero,
+            y: self.view.bounds.height - Constants.sizeButton,
+            width: self.view.bounds.width,
+            height: Constants.sizeButton
+        )
+        buttonAdd.setTitle(Constants.titleAddButton, for: .normal)
         buttonAdd.setTitleColor( .black, for: .normal)
         buttonAdd.backgroundColor = .gray
         buttonAdd.addAction(UIAction(handler: {_ in self.add()}), for: .touchUpInside)
@@ -114,7 +73,7 @@ class ViewController: UIViewController , UITableViewDelegate, UITableViewDataSou
     }
     
     func add() {
-        tableView.frame.origin.y -= 30
+        tableView.frame.origin.y -= Constants.sizeButton
         buttonAdd.isHidden = true
         buttonFolder.isHidden = false
         buttonFile.isHidden = false
@@ -122,75 +81,28 @@ class ViewController: UIViewController , UITableViewDelegate, UITableViewDataSou
     }
     
     func addFile() {
-        createFile()
+        files.append(contentsOf: FM().createFile(fileName: textField.text ?? "null"))
         buttonAdd.isHidden = false
         buttonFile.isHidden = true
         buttonFolder.isHidden = true
         textField.isHidden = true
-        tableView.frame.origin.y += 30
+        tableView.frame.origin.y += Constants.sizeButton
+        tableView.reloadData()
     }
     
     func addFolder() {
-        createFolder()
+        files.append(contentsOf: FM().createFolder(fileName: textField.text ?? "null"))
         buttonAdd.isHidden = false
         buttonFolder.isHidden = true
         buttonFile.isHidden = true
         textField.isHidden = true
-        tableView.frame.origin.y += 30
+        tableView.frame.origin.y += Constants.sizeButton
     }
-    
-    // MARK: FileManager
-    
-    func getFiles() {
-        let tempDir = NSTemporaryDirectory()
-        let url = URL(fileURLWithPath: tempDir)
-        let contents = try! FileManager.default.contentsOfDirectory(at: url,
-                                                        includingPropertiesForKeys: nil,
-                                                        options: [.skipsHiddenFiles])
-        contents.forEach { link in
-            let name = link.lastPathComponent
-            let typeFile = try! FileManager.default.attributesOfItem(atPath: link.path)[.type] as! String
-            let size = try! FileManager.default.attributesOfItem(atPath: link.path)[.size] as? Int
-            let file = FileFolder(name: name, size: size ?? 0, type: typeFile)
-            files.append(file)
-        }
-    }
-    
-    func createFile() {
-        
-        let tempDir = NSTemporaryDirectory()
-        guard let fileName = textField.text else { return }
-        
-        let path = (tempDir as NSString).appendingPathComponent(fileName)
-        let contentsOfFile = "Some Text Here"
-        
-        do {
-            try contentsOfFile.write(toFile: path, atomically: true, encoding: String.Encoding.utf8)
-            print("File text.txt created at temp directory")
-        } catch let error as NSError {
-            print("could't create file text.txt because of error: \(error)")
-        }
-        let size = try! FileManager.default.attributesOfItem(atPath: path)[.size] as? Int
-        files.append(FileFolder(name: fileName, size: size ?? 0, type: "NSFileTypeRegular"))
-        tableView.reloadData()
-    }
-    
-    func createFolder() {
-        let tempDir = NSTemporaryDirectory()
-        guard let fileName = textField.text else { return }
-        do {
-            try FileManager.default.createDirectory(atPath: tempDir + fileName, withIntermediateDirectories: true, attributes: nil)
-            print("Directory create \(tempDir + fileName)")
-        } catch {
-            print(error)
-        }
-        let size = try! FileManager.default.attributesOfItem(atPath: tempDir + fileName)[.size] as? Int
-        files.append(FileFolder(name: fileName, size: size ?? 0, type: "NSFileTypeDirectory"))
-        tableView.reloadData()
-    }
-    
-    // MARK: Drag and Drop
+}
 
+// MARK: UITableViewDragDelegate
+
+extension ViewController: UITableViewDragDelegate {
     func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
         let mover = files.remove(at: sourceIndexPath.row)
         files.insert(mover, at: destinationIndexPath.row)
@@ -202,13 +114,83 @@ class ViewController: UIViewController , UITableViewDelegate, UITableViewDataSou
         return [dragItem]
     }
     
-    
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == UITableViewCell.EditingStyle.delete {
             files.remove(at: indexPath.row)
             tableView.deleteRows(at: [indexPath], with: UITableView.RowAnimation.automatic)
         }
     }
+}
 
+// MARK: UITableViewDataSource
+
+extension ViewController: UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return files.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: UITableViewCell.CellStyle.value1, reuseIdentifier: Constants.identificator)
+        if files[indexPath.row].type == Constants.NSFileTypeRegularString {
+            cell.imageView?.image = UIImage(named: Constants.stringFileImage)
+        }
+        if files[indexPath.row].type == Constants.NSFileTypeDirectoryString {
+            cell.imageView?.image = UIImage(named: Constants.stringFolderImage)
+        }
+        cell.textLabel?.text = files[indexPath.row].name
+        cell.detailTextLabel?.text = "\(files[indexPath.row].size) KB"
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return Constants.heightRow
+    }
+    
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let footerView = UIView()
+        
+        textField = UITextField(
+            frame: CGRect(
+                x: .zero,
+                y: self.view.bounds.height - Constants.sizeButton * Constants.half,
+                width: self.view.bounds.width,
+                height: Constants.sizeButton
+            )
+        )
+        textField.placeholder = Constants.placeholderName
+        textField.isHidden = true
+        
+        buttonFile = UIButton()
+        buttonFile.frame = CGRect(
+            x: .zero,
+            y: self.view.bounds.height - Constants.sizeButton,
+            width: self.view.bounds.width / Constants.half,
+            height: Constants.sizeButton
+        )
+        buttonFile.setTitle(Constants.stringCreateFile, for: .normal)
+        buttonFile.setTitleColor( .black, for: .normal)
+        buttonFile.backgroundColor = .gray
+        buttonFile.addAction(UIAction(handler: {_ in self.addFile()}), for: .touchUpInside)
+        buttonFile.isHidden = true
+        
+        buttonFolder = UIButton()
+        buttonFolder.frame = CGRect(
+            x: self.view.bounds.width / Constants.half,
+            y: self.view.bounds.height - Constants.sizeButton,
+            width: self.view.bounds.width / Constants.half,
+            height: Constants.sizeButton
+        )
+        buttonFolder.setTitle(Constants.stringCreateFolder, for: .normal)
+        buttonFolder.setTitleColor( .black, for: .normal)
+        buttonFolder.backgroundColor = .gray
+        buttonFolder.addAction(UIAction(handler: {_ in self.addFolder()}), for: .touchUpInside)
+        buttonFolder.isHidden = true
+        
+        self.view.addSubview(buttonFile)
+        self.view.addSubview(buttonFolder)
+        self.view.addSubview(textField)
+        
+        return footerView
+    }
 }
 
